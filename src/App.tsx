@@ -9,47 +9,62 @@ import type { ScanConfig, TelegramSettings } from "./types";
 
 const SCAN_CONFIG_STORAGE_KEY = "webrsi.scanConfig";
 const TELEGRAM_STORAGE_KEY = "webrsi.telegramSettings";
+const SETTINGS_API = "http://127.0.0.1:8788/settings";
+
+type PersistedSettings = {
+  scanConfig: ScanConfig;
+  telegramSettings: TelegramSettings;
+};
+
+function normalizeScanConfig(raw: Partial<ScanConfig>): ScanConfig {
+  return {
+    ...DEFAULT_CONFIG,
+    ...raw,
+    tfFast: typeof raw.tfFast === "string" ? raw.tfFast : DEFAULT_CONFIG.tfFast,
+    tfSlow: typeof raw.tfSlow === "string" ? raw.tfSlow : DEFAULT_CONFIG.tfSlow,
+    tfBig: typeof raw.tfBig === "string" ? raw.tfBig : DEFAULT_CONFIG.tfBig,
+    rsiPeriod: typeof raw.rsiPeriod === "number" ? raw.rsiPeriod : DEFAULT_CONFIG.rsiPeriod,
+    overbought: typeof raw.overbought === "number" ? raw.overbought : DEFAULT_CONFIG.overbought,
+    oversold: typeof raw.oversold === "number" ? raw.oversold : DEFAULT_CONFIG.oversold,
+    extremeOb: typeof raw.extremeOb === "number" ? raw.extremeOb : DEFAULT_CONFIG.extremeOb,
+    extremeOs: typeof raw.extremeOs === "number" ? raw.extremeOs : DEFAULT_CONFIG.extremeOs,
+    resetFromOb: typeof raw.resetFromOb === "number" ? raw.resetFromOb : DEFAULT_CONFIG.resetFromOb,
+    resetFromOs: typeof raw.resetFromOs === "number" ? raw.resetFromOs : DEFAULT_CONFIG.resetFromOs,
+    resetFromExtremeOb:
+      typeof raw.resetFromExtremeOb === "number"
+        ? raw.resetFromExtremeOb
+        : DEFAULT_CONFIG.resetFromExtremeOb,
+    resetFromExtremeOs:
+      typeof raw.resetFromExtremeOs === "number"
+        ? raw.resetFromExtremeOs
+        : DEFAULT_CONFIG.resetFromExtremeOs,
+    topN: typeof raw.topN === "number" ? raw.topN : DEFAULT_CONFIG.topN,
+    pollIntervalS:
+      typeof raw.pollIntervalS === "number" ? raw.pollIntervalS : DEFAULT_CONFIG.pollIntervalS,
+  };
+}
+
+function normalizeTelegramSettings(raw: Partial<TelegramSettings>): TelegramSettings {
+  return {
+    ...DEFAULT_TELEGRAM_SETTINGS,
+    ...raw,
+    enabled: Boolean(raw.enabled),
+    botToken: typeof raw.botToken === "string" ? raw.botToken : "",
+    chatId: typeof raw.chatId === "string" ? raw.chatId : "",
+    topicThreadId: typeof raw.topicThreadId === "string" ? raw.topicThreadId : "",
+    messageMode: raw.messageMode === "custom" ? "custom" : "default",
+    customMessage:
+      typeof raw.customMessage === "string"
+        ? raw.customMessage
+        : DEFAULT_TELEGRAM_SETTINGS.customMessage,
+  };
+}
 
 function loadScanConfig(): ScanConfig {
   const raw = localStorage.getItem(SCAN_CONFIG_STORAGE_KEY);
   if (!raw) return DEFAULT_CONFIG;
-
   try {
-    const parsed = JSON.parse(raw) as Partial<ScanConfig>;
-    return {
-      ...DEFAULT_CONFIG,
-      ...parsed,
-      tfFast: typeof parsed.tfFast === "string" ? parsed.tfFast : DEFAULT_CONFIG.tfFast,
-      tfSlow: typeof parsed.tfSlow === "string" ? parsed.tfSlow : DEFAULT_CONFIG.tfSlow,
-      tfBig: typeof parsed.tfBig === "string" ? parsed.tfBig : DEFAULT_CONFIG.tfBig,
-      rsiPeriod:
-        typeof parsed.rsiPeriod === "number" ? parsed.rsiPeriod : DEFAULT_CONFIG.rsiPeriod,
-      overbought:
-        typeof parsed.overbought === "number" ? parsed.overbought : DEFAULT_CONFIG.overbought,
-      oversold:
-        typeof parsed.oversold === "number" ? parsed.oversold : DEFAULT_CONFIG.oversold,
-      extremeOb:
-        typeof parsed.extremeOb === "number" ? parsed.extremeOb : DEFAULT_CONFIG.extremeOb,
-      extremeOs:
-        typeof parsed.extremeOs === "number" ? parsed.extremeOs : DEFAULT_CONFIG.extremeOs,
-      resetFromOb:
-        typeof parsed.resetFromOb === "number" ? parsed.resetFromOb : DEFAULT_CONFIG.resetFromOb,
-      resetFromOs:
-        typeof parsed.resetFromOs === "number" ? parsed.resetFromOs : DEFAULT_CONFIG.resetFromOs,
-      resetFromExtremeOb:
-        typeof parsed.resetFromExtremeOb === "number"
-          ? parsed.resetFromExtremeOb
-          : DEFAULT_CONFIG.resetFromExtremeOb,
-      resetFromExtremeOs:
-        typeof parsed.resetFromExtremeOs === "number"
-          ? parsed.resetFromExtremeOs
-          : DEFAULT_CONFIG.resetFromExtremeOs,
-      topN: typeof parsed.topN === "number" ? parsed.topN : DEFAULT_CONFIG.topN,
-      pollIntervalS:
-        typeof parsed.pollIntervalS === "number"
-          ? parsed.pollIntervalS
-          : DEFAULT_CONFIG.pollIntervalS,
-    };
+    return normalizeScanConfig(JSON.parse(raw) as Partial<ScanConfig>);
   } catch (error) {
     console.warn("Failed to load scan config:", error);
     return DEFAULT_CONFIG;
@@ -59,27 +74,32 @@ function loadScanConfig(): ScanConfig {
 function loadTelegramSettings(): TelegramSettings {
   const raw = localStorage.getItem(TELEGRAM_STORAGE_KEY);
   if (!raw) return DEFAULT_TELEGRAM_SETTINGS;
-
   try {
-    const parsed = JSON.parse(raw) as Partial<TelegramSettings>;
-    return {
-      ...DEFAULT_TELEGRAM_SETTINGS,
-      ...parsed,
-      enabled: Boolean(parsed.enabled),
-      botToken: typeof parsed.botToken === "string" ? parsed.botToken : "",
-      chatId: typeof parsed.chatId === "string" ? parsed.chatId : "",
-      topicThreadId:
-        typeof parsed.topicThreadId === "string" ? parsed.topicThreadId : "",
-      messageMode:
-        parsed.messageMode === "custom" ? "custom" : "default",
-      customMessage:
-        typeof parsed.customMessage === "string"
-          ? parsed.customMessage
-          : DEFAULT_TELEGRAM_SETTINGS.customMessage,
-    };
+    return normalizeTelegramSettings(JSON.parse(raw) as Partial<TelegramSettings>);
   } catch (error) {
     console.warn("Failed to load Telegram settings:", error);
     return DEFAULT_TELEGRAM_SETTINGS;
+  }
+}
+
+async function loadPersistedSettings(): Promise<PersistedSettings | null> {
+  const response = await fetch(SETTINGS_API, { cache: "no-store" });
+  if (!response.ok) return null;
+  const data = (await response.json()) as Partial<PersistedSettings>;
+  return {
+    scanConfig: normalizeScanConfig(data.scanConfig ?? {}),
+    telegramSettings: normalizeTelegramSettings(data.telegramSettings ?? {}),
+  };
+}
+
+async function savePersistedSettings(config: ScanConfig, telegram: TelegramSettings): Promise<void> {
+  const response = await fetch(SETTINGS_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ scanConfig: config, telegramSettings: telegram }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to save settings (${response.status})`);
   }
 }
 
@@ -87,6 +107,7 @@ export default function App() {
   const [config, setConfig] = useState<ScanConfig>(loadScanConfig);
   const [showConfig, setShowConfig] = useState(false);
   const [telegram, setTelegram] = useState<TelegramSettings>(loadTelegramSettings);
+  const [settingsReady, setSettingsReady] = useState(false);
 
   const { alerts, pairRSIMap, scanState, start, stop, clearAlerts } =
     useScanLoop(config, telegram);
@@ -102,12 +123,35 @@ export default function App() {
   }, [start]);
 
   useEffect(() => {
+    void (async () => {
+      try {
+        const persisted = await loadPersistedSettings();
+        if (persisted) {
+          setConfig(persisted.scanConfig);
+          setTelegram(persisted.telegramSettings);
+        }
+      } catch (error) {
+        console.warn("Failed to load persisted settings file:", error);
+      } finally {
+        setSettingsReady(true);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem(SCAN_CONFIG_STORAGE_KEY, JSON.stringify(config));
   }, [config]);
 
   useEffect(() => {
     localStorage.setItem(TELEGRAM_STORAGE_KEY, JSON.stringify(telegram));
   }, [telegram]);
+
+  useEffect(() => {
+    if (!settingsReady) return;
+    void savePersistedSettings(config, telegram).catch((error) => {
+      console.warn("Failed to sync settings file:", error);
+    });
+  }, [config, telegram, settingsReady]);
 
   const toggleScan = () => {
     if (scanState.running) stop();

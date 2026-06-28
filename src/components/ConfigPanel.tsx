@@ -234,7 +234,7 @@ export function ConfigPanel({
       <p className="config-note">
         Placeholders: {"{{symbol}}"}, {"{{zone}}"}, {"{{tfFast}}"}, {"{{tfSlow}}"}, {"{{tfBig}}"}, {"{{rsiFast}}"}, {"{{rsiSlow}}"}, {"{{rsiBig}}"}, {"{{time}}"}.
       </p>
-      <p className="config-note">Settings are saved on this device automatically.</p>
+      <p className="config-note">Settings are saved locally and synced to a config file automatically.</p>
     </div>
   );
 }
