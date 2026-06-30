@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { getTopSymbols, getCloses } from "../api/bingx";
-import { sendTelegramMessage } from "../api/telegram";
+import { sendTelegramMessage, sendTelegramScanStart } from "../api/telegram";
 import { computeRSI } from "../lib/rsi";
 import type {
   Alert,
@@ -227,6 +227,11 @@ export function useScanLoop(config: ScanConfig, telegram: TelegramSettings) {
     }));
 
     const cfg = configRef.current;
+
+    void sendTelegramScanStart(cfg, telegram).catch((error) => {
+      console.error("Telegram scan-start notification error:", error);
+    });
+
     const symbols = await getTopSymbols(cfg.topN);
     if (cancelRef.current) {
       runningRef.current = false;

@@ -5,7 +5,8 @@ import { PairTable } from "./components/PairTable";
 import { ScanProgress } from "./components/ScanProgress";
 import { ConfigPanel } from "./components/ConfigPanel";
 import { DEFAULT_CONFIG, DEFAULT_TELEGRAM_SETTINGS } from "./types";
-import type { ScanConfig, TelegramSettings } from "./types";
+import type { ScanConfig, TelegramDestination, TelegramSettings } from "./types";
+import { startTelegramCommandListener } from "./api/telegram";
 
 const SCAN_CONFIG_STORAGE_KEY = "webrsi.scanConfig";
 const TELEGRAM_STORAGE_KEY = "webrsi.telegramSettings";
@@ -44,14 +45,42 @@ function normalizeScanConfig(raw: Partial<ScanConfig>): ScanConfig {
   };
 }
 
-function normalizeTelegramSettings(raw: Partial<TelegramSettings>): TelegramSettings {
+function normalizeTelegramDestination(
+  raw: Partial<TelegramDestination> | undefined
+): TelegramDestination {
+  return {
+    enabled: typeof raw?.enabled === "boolean" ? raw.enabled : true,
+    chatId: typeof raw?.chatId === "string" ? raw.chatId : "",
+    topicThreadId: typeof raw?.topicThreadId === "string" ? raw.topicThreadId : "",
+  };
+}
+
+function normalizeTelegramSettings(
+  raw: Partial<TelegramSettings> & {
+    chatId?: unknown;
+    topicThreadId?: unknown;
+    destinations?: unknown;
+  }
+): TelegramSettings {
+  const destinations =
+    Array.isArray(raw.destinations) && raw.destinations.length > 0
+      ? raw.destinations.map((entry) =>
+          normalizeTelegramDestination(entry as Partial<TelegramDestination>)
+        )
+      : [
+          normalizeTelegramDestination({
+            enabled: typeof raw.enabled === "boolean" ? raw.enabled : true,
+            chatId: typeof raw.chatId === "string" ? raw.chatId : "",
+            topicThreadId: typeof raw.topicThreadId === "string" ? raw.topicThreadId : "",
+          }),
+        ];
+
   return {
     ...DEFAULT_TELEGRAM_SETTINGS,
     ...raw,
     enabled: Boolean(raw.enabled),
     botToken: typeof raw.botToken === "string" ? raw.botToken : "",
-    chatId: typeof raw.chatId === "string" ? raw.chatId : "",
-    topicThreadId: typeof raw.topicThreadId === "string" ? raw.topicThreadId : "",
+    destinations,
     messageMode: raw.messageMode === "custom" ? "custom" : "default",
     customMessage:
       typeof raw.customMessage === "string"
@@ -152,6 +181,11 @@ export default function App() {
       console.warn("Failed to sync settings file:", error);
     });
   }, [config, telegram, settingsReady]);
+
+  useEffect(() => {
+    const stopTelegramCommands = startTelegramCommandListener(telegram);
+    return stopTelegramCommands;
+  }, [telegram]);
 
   const toggleScan = () => {
     if (scanState.running) stop();

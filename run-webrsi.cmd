@@ -32,8 +32,7 @@ if not exist node_modules (
   echo.
 )
 
-echo Starting the settings sync server...
-start "WebRSI Settings API" cmd /k "cd /d ""%~dp0"" && node scripts\settings-server.mjs"
+start "" /b cmd /c "cd /d ""%~dp0"" && node scripts\settings-server.mjs >nul 2>&1"
 
 echo Starting the app...
 start "WebRSI Dev Server" cmd /k "cd /d ""%~dp0"" && npm run dev -- --host 127.0.0.1 --port 5173 --strictPort"

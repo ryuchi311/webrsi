@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import type { ScanConfig, TelegramSettings, TelegramMessageMode } from "../types";
+import type {
+  ScanConfig,
+  TelegramDestination,
+  TelegramMessageMode,
+  TelegramSettings,
+} from "../types";
 
 interface ConfigPanelProps {
   config: ScanConfig;
@@ -46,6 +51,30 @@ export function ConfigPanel({
   }, [config]);
 
   const applyDraft = () => onChange(draft);
+  const updateDestination = (index: number, next: Partial<TelegramDestination>) => {
+    onTelegramChange({
+      ...telegram,
+      destinations: telegram.destinations.map((destination, currentIndex) =>
+        currentIndex === index ? { ...destination, ...next } : destination
+      ),
+    });
+  };
+  const addDestination = () => {
+    onTelegramChange({
+      ...telegram,
+      destinations: [
+        ...telegram.destinations,
+        { enabled: true, chatId: "", topicThreadId: "" },
+      ],
+    });
+  };
+  const removeDestination = (index: number) => {
+    if (telegram.destinations.length <= 1) return;
+    onTelegramChange({
+      ...telegram,
+      destinations: telegram.destinations.filter((_, currentIndex) => currentIndex !== index),
+    });
+  };
 
   return (
     <div className="config-panel">
@@ -174,32 +203,6 @@ export function ConfigPanel({
           />
         </div>
         <div className="config-field">
-          <label>Chat ID</label>
-          <input
-            className="config-input"
-            type="text"
-            placeholder="-1001234567890"
-            disabled={disabled}
-            value={telegram.chatId}
-            onChange={(e) =>
-              onTelegramChange({ ...telegram, chatId: e.target.value })
-            }
-          />
-        </div>
-        <div className="config-field">
-          <label>Topic thread ID (optional)</label>
-          <input
-            className="config-input"
-            type="text"
-            placeholder="123"
-            disabled={disabled}
-            value={telegram.topicThreadId}
-            onChange={(e) =>
-              onTelegramChange({ ...telegram, topicThreadId: e.target.value })
-            }
-          />
-        </div>
-        <div className="config-field">
           <label>Message mode</label>
           <select
             className="config-select"
@@ -231,10 +234,87 @@ export function ConfigPanel({
         />
       </div>
 
-      <p className="config-note">
-        Placeholders: {"{{symbol}}"}, {"{{zone}}"}, {"{{tfFast}}"}, {"{{tfSlow}}"}, {"{{tfBig}}"}, {"{{rsiFast}}"}, {"{{rsiSlow}}"}, {"{{rsiBig}}"}, {"{{time}}"}.
-      </p>
-      <p className="config-note">Settings are saved locally and synced to a config file automatically.</p>
+        <div className="config-section-header">
+          <h4>Destinations</h4>
+          <button
+            className="btn btn-ghost"
+            disabled={disabled}
+            onClick={addDestination}
+          >
+            Add destination
+          </button>
+        </div>
+
+        <div className="telegram-destinations">
+          {telegram.destinations.map((destination, index) => (
+            <div className="telegram-destination-card" key={index}>
+              <div className="telegram-destination-head">
+                <strong>Destination {index + 1}</strong>
+                <label className="config-switch">
+                  <input
+                    type="checkbox"
+                    checked={destination.enabled}
+                    disabled={disabled}
+                    onChange={(e) =>
+                      updateDestination(index, { enabled: e.target.checked })
+                    }
+                  />
+                  <span>Enable</span>
+                </label>
+              </div>
+              <div className="config-grid telegram-grid">
+                <div className="config-field">
+                  <label>Chat ID</label>
+                  <input
+                    className="config-input"
+                    type="text"
+                    placeholder="-1001234567890"
+                    disabled={disabled}
+                    value={destination.chatId}
+                    onChange={(e) =>
+                      updateDestination(index, { chatId: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="config-field">
+                  <label>Topic thread ID (optional)</label>
+                  <input
+                    className="config-input"
+                    type="text"
+                    placeholder="123"
+                    disabled={disabled}
+                    value={destination.topicThreadId}
+                    onChange={(e) =>
+                      updateDestination(index, { topicThreadId: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="telegram-destination-actions">
+                <button
+                  className="btn btn-ghost"
+                  disabled={disabled || telegram.destinations.length === 1}
+                  onClick={() => removeDestination(index)}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="config-note">
+          Placeholders: {"{{symbol}}"}, {"{{zone}}"}, {"{{tfFast}}"}, {"{{tfSlow}}"}, {"{{tfBig}}"}, {"{{rsiFast}}"}, {"{{rsiSlow}}"}, {"{{rsiBig}}"}, {"{{time}}"}.
+        </p>
+        <p className="config-note">
+          Disable a destination to keep it saved but inactive. Settings are saved locally and synced to a config file automatically.
+        </p>
+        <p className="config-note">
+          Telegram commands: send <code>/getmyid</code> in private chat or <code>/getgroupid</code> in a group/topic to get IDs.
+        </p>
+        <p className="config-note">
+          For safer local setup, put <code>VITE_TELEGRAM_BOT_TOKEN</code> in <code>.env.local</code> and leave Bot Token empty.
+        </p>
     </div>
   );
 }

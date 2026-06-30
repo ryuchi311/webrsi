@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment / local settings
+.env
+.env.*
+portable-settings.json
+.webrsi.settings.json
+webrsi.settings.json
+.vite/

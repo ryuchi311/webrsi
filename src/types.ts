@@ -40,11 +40,16 @@ export interface ScanConfig {
 
 export type TelegramMessageMode = "default" | "custom";
 
+export interface TelegramDestination {
+  enabled: boolean;
+  chatId: string;
+  topicThreadId: string;
+}
+
 export interface TelegramSettings {
   enabled: boolean;
   botToken: string;
-  chatId: string;
-  topicThreadId: string;
+  destinations: TelegramDestination[];
   messageMode: TelegramMessageMode;
   customMessage: string;
 }
@@ -69,8 +74,13 @@ export const DEFAULT_CONFIG: ScanConfig = {
 export const DEFAULT_TELEGRAM_SETTINGS: TelegramSettings = {
   enabled: false,
   botToken: "",
-  chatId: "",
-  topicThreadId: "",
+  destinations: [
+    {
+      enabled: true,
+      chatId: "",
+      topicThreadId: "",
+    },
+  ],
   messageMode: "default",
   customMessage:
     "🔔 RSI Alert\n\nSymbol: {{symbol}}\nZone: {{zone}}\nFast ({{tfFast}}): {{rsiFast}}\nSlow ({{tfSlow}}): {{rsiSlow}}\n4hrs ({{tfBig}}): {{rsiBig}}\nTime: {{time}}",

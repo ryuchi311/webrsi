@@ -30,3 +30,15 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## Local files
+
+Do not upload these to GitHub:
+- `.env`
+- `.env.*`
+- use `.env.local` for `VITE_TELEGRAM_BOT_TOKEN`
+- `portable-settings.json`
+- `node_modules/`
+- `dist/`
+
+These files can contain secrets or machine-specific data.

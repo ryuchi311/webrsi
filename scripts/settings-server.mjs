@@ -7,7 +7,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = join(__dirname, "..");
-const settingsFile = join(rootDir, "webrsi.settings.json");
+const settingsFile = join(rootDir, "portable-settings.json");
 const port = Number.parseInt(process.env.WEBRSI_SETTINGS_PORT ?? "8788", 10);
 
 const defaults = {
@@ -106,8 +106,4 @@ const server = createServer(async (req, res) => {
   }
 
   sendJson(res, 404, { error: "Not found" });
-});
-
-server.listen(port, "127.0.0.1", () => {
-  console.log(`WebRSI settings server running on http://127.0.0.1:${port}`);
 });
